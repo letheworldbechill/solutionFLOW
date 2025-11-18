@@ -1,30 +1,102 @@
-// ================= CONFIG & CONSTANTS =================
-
-const steps = {
-  emotion: {
-    label: "Auslöser der Emotion",
-    subtitle: "Unangenehme Welle ernst nehmen und benennen."
-  },
-  situation: {
-    label: "Entstehungskontext des Auslösers",
-    subtitle: "Situation so objektiv wie möglich betrachten."
-  },
-  solution: {
-    label: "Hindernisse & mögliche Lösungen",
-    subtitle: "Wie gehe ich konstruktiv mit dieser Situation um?"
-  }
-};
-
+const stepsOrder = ["emotion", "situation", "solution"];
 const STORAGE_KEY_PROBLEMS = "sf_problems_v1";
 const STORAGE_KEY_CURRENT = "sf_current_problem_id";
 const STORAGE_KEY_THEME = "sf_theme";
+const STORAGE_KEY_PASSWORD_HASH = "sf_pw_hash_v1";
 
 let problems = [];
 let currentProblem = null;
 let activeStep = "emotion";
+let isProgrammaticScroll = false;
 
-// ================= UTIL / STORAGE =================
+// DOM
+const slider = document.getElementById("slider");
+const swipeTabs = document.querySelectorAll(".swipe-tab");
+const progressInner = document.getElementById("progress-inner");
 
+const textareaEmotion = document.getElementById("text-emotion");
+const textareaSituation = document.getElementById("text-situation");
+const textareaSolution = document.getElementById("text-solution");
+const cardEmotion = document.getElementById("card-emotion");
+const cardSituation = document.getElementById("card-situation");
+const cardSolution = document.getElementById("card-solution");
+
+const statusEl = document.getElementById("status");
+const newProblemBtn = document.getElementById("new-problem-btn");
+const summaryEl = document.getElementById("summary");
+const summaryEmotion = document.getElementById("summary-emotion");
+const summarySituation = document.getElementById("summary-situation");
+const summarySolution = document.getElementById("summary-solution");
+const historyListEl = document.getElementById("history-list");
+
+const detailOverlay = document.getElementById("detail-overlay");
+const detailEmotion = document.getElementById("detail-emotion");
+const detailSituation = document.getElementById("detail-situation");
+const detailSolution = document.getElementById("detail-solution");
+const detailClose = document.getElementById("detail-close");
+
+const themeChips = document.querySelectorAll(".chip");
+
+// Passwort DOM
+const pwScreen = document.getElementById("pw-screen");
+const pwTitle = document.getElementById("pw-title");
+const pwInput = document.getElementById("pw-input");
+const pwSubmit = document.getElementById("pw-submit");
+
+// Buttons für Bestätigen
+document.querySelectorAll("[data-step-confirm]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const step = btn.getAttribute("data-step-confirm");
+    confirmStep(step);
+  });
+});
+
+// ---------- Passwort-Hash (einfacher Schutz, kein Hardcore-Security) ----------
+async function sha256(str) {
+  const data = new TextEncoder().encode(str);
+  const hashBuf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuf))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function handlePasswordGate() {
+  const storedHash = localStorage.getItem(STORAGE_KEY_PASSWORD_HASH);
+
+  pwScreen.style.display = "flex";
+  if (!storedHash) {
+    pwTitle.textContent = "Passwort festlegen";
+    pwSubmit.textContent = "Speichern & öffnen";
+  } else {
+    pwTitle.textContent = "Passwort eingeben";
+    pwSubmit.textContent = "Entsperren";
+  }
+
+  pwSubmit.addEventListener("click", async () => {
+    const pw = pwInput.value;
+    if (!pw) {
+      alert("Bitte ein Passwort eingeben.");
+      return;
+    }
+    const hash = await sha256(pw);
+
+    if (!storedHash) {
+      // Erstmaliges Setzen
+      localStorage.setItem(STORAGE_KEY_PASSWORD_HASH, hash);
+      pwScreen.style.display = "none";
+      initApp();
+    } else {
+      if (hash === storedHash) {
+        pwScreen.style.display = "none";
+        initApp();
+      } else {
+        alert("Falsches Passwort.");
+      }
+    }
+  });
+}
+
+// ---------- Storage ----------
 function loadProblems() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY_PROBLEMS);
@@ -70,37 +142,53 @@ function createNewProblem() {
   setCurrentProblem(p);
 }
 
-// ================= DOM HOOKS =================
+// ---------- Slider Helfer ----------
+const stepsOrder = ["emotion", "situation", "solution"];
 
-const stepCard = document.getElementById("step-card");
-const stepLabelEl = document.getElementById("step-label");
-const stepSubtitleEl = document.getElementById("step-subtitle");
-const stepTextEl = document.getElementById("step-text");
-const confirmBtn = document.getElementById("confirm-btn");
+function indexForStep(step) {
+  return stepsOrder.indexOf(step);
+}
 
-const tabEmotion = document.getElementById("tab-emotion");
-const tabSituation = document.getElementById("tab-situation");
-const tabSolution = document.getElementById("tab-solution");
+function getAllowedIndex() {
+  if (!currentProblem) return 0;
+  let idx = 0;
+  if (currentProblem.emotionDone) idx = 1;
+  if (currentProblem.situationDone) idx = 2;
+  return idx;
+}
 
-const summaryEl = document.getElementById("summary");
-const summaryEmotion = document.getElementById("summary-emotion");
-const summarySituation = document.getElementById("summary-situation");
-const summarySolution = document.getElementById("summary-solution");
-const statusEl = document.getElementById("status");
-const newProblemBtn = document.getElementById("new-problem-btn");
-const historyListEl = document.getElementById("history-list");
+function goToSlide(index) {
+  const width = slider.clientWidth;
+  isProgrammaticScroll = true;
+  slider.scrollTo({ left: index * width, behavior: "smooth" });
+  setTimeout(() => { isProgrammaticScroll = false; }, 350);
+  activeStep = stepsOrder[index];
+  renderActiveStep();
+}
 
-const themeChips = document.querySelectorAll(".chip");
+slider.addEventListener("scroll", () => {
+  if (isProgrammaticScroll) return;
+  const width = slider.clientWidth || 1;
+  const rawIndex = slider.scrollLeft / width;
+  const index = Math.round(rawIndex);
+  const allowed = getAllowedIndex();
+  if (index > allowed) {
+    goToSlide(allowed);
+    return;
+  }
+  activeStep = stepsOrder[Math.max(0, Math.min(index, stepsOrder.length - 1))];
+  renderActiveStep();
+});
 
-// Detail modal
-const detailOverlay = document.getElementById("detail-overlay");
-const detailEmotion = document.getElementById("detail-emotion");
-const detailSituation = document.getElementById("detail-situation");
-const detailSolution = document.getElementById("detail-solution");
-const detailClose = document.getElementById("detail-close");
+swipeTabs.forEach((tab, idx) => {
+  tab.addEventListener("click", () => {
+    const allowed = getAllowedIndex();
+    const target = Math.min(idx, allowed);
+    goToSlide(target);
+  });
+});
 
-// ================= PX-GLOW =================
-
+// ---------- PX Glow ----------
 function trackGlow(el) {
   el.addEventListener("mousemove", e => {
     const r = el.getBoundingClientRect();
@@ -111,58 +199,52 @@ function trackGlow(el) {
 
 document.querySelectorAll(".px-card").forEach(trackGlow);
 
-// ================= RENDERING =================
-
+// ---------- Rendering ----------
 function renderActiveStep() {
-  const cfg = steps[activeStep];
-  stepLabelEl.textContent = cfg.label;
-  stepSubtitleEl.textContent = cfg.subtitle;
-
-  // Tabs state
-  [tabEmotion, tabSituation, tabSolution].forEach(btn => {
-    btn.classList.remove("active");
-  });
-  const map = { emotion: tabEmotion, situation: tabSituation, solution: tabSolution };
-  map[activeStep].classList.add("active");
-
   if (!currentProblem) return;
 
-  stepCard.classList.remove("completed");
-  stepTextEl.disabled = false;
-  confirmBtn.disabled = false;
+  textareaEmotion.value = currentProblem.emotion || "";
+  textareaSituation.value = currentProblem.situation || "";
+  textareaSolution.value = currentProblem.solution || "";
 
-  stepTextEl.value = currentProblem[activeStep] || "";
+  textareaEmotion.disabled = currentProblem.emotionDone || currentProblem.completed;
+  textareaSituation.disabled =
+    !currentProblem.emotionDone || currentProblem.situationDone || currentProblem.completed;
+  textareaSolution.disabled =
+    !currentProblem.situationDone || currentProblem.solutionDone || currentProblem.completed;
 
-  const doneKey = activeStep + "Done";
-  if (currentProblem[doneKey]) {
-    stepCard.classList.add("completed");
-    stepTextEl.disabled = true;
-    confirmBtn.disabled = true;
-  }
+  cardEmotion.classList.toggle("completed", !!currentProblem.emotionDone);
+  cardSituation.classList.toggle("completed", !!currentProblem.situationDone);
+  cardSolution.classList.toggle("completed", !!currentProblem.solutionDone);
 
-  if (currentProblem.completed) {
-    stepCard.classList.add("completed");
-    stepTextEl.disabled = true;
-    confirmBtn.disabled = true;
-  }
-
-  renderTabsState();
+  updateSwipeTabs();
+  updateProgress();
   renderSummary();
   renderStatus();
   renderHistory();
 }
 
-function renderTabsState() {
-  if (!currentProblem) return;
+function updateSwipeTabs() {
+  swipeTabs.forEach(tab => {
+    const step = tab.dataset.step;
+    const isActive = step === activeStep;
+    const isDone = currentProblem && currentProblem[step + "Done"];
+    tab.classList.toggle("active", isActive);
+    tab.classList.toggle("completed", !!isDone);
+  });
+}
 
-  function setState(tab, done) {
-    tab.classList.remove("completed");
-    if (done) tab.classList.add("completed");
+function updateProgress() {
+  if (!currentProblem) {
+    progressInner.style.width = "0%";
+    return;
   }
-
-  setState(tabEmotion, currentProblem.emotionDone);
-  setState(tabSituation, currentProblem.situationDone);
-  setState(tabSolution, currentProblem.solutionDone);
+  let doneCount = 0;
+  stepsOrder.forEach(s => {
+    if (currentProblem[s + "Done"]) doneCount++;
+  });
+  const pct = (doneCount / stepsOrder.length) * 100;
+  progressInner.style.width = pct + "%";
 }
 
 function renderSummary() {
@@ -247,44 +329,51 @@ function renderHistory() {
   });
 }
 
-// ================= INTERACTION LOGIC =================
-
-function handleConfirm() {
+// ---------- Interaktion ----------
+function confirmStep(step) {
   if (!currentProblem || currentProblem.completed) return;
-  const text = stepTextEl.value.trim();
-  if (!text) {
-    alert("Schreib zuerst etwas in das Feld, bevor du bestätigst.");
+
+  const map = {
+    emotion: textareaEmotion,
+    situation: textareaSituation,
+    solution: textareaSolution
+  };
+  const el = map[step];
+  const val = el.value.trim();
+  if (!val) {
+    alert("Bitte fülle das Feld aus.");
     return;
   }
 
-  currentProblem[activeStep] = text;
-  currentProblem[activeStep + "Done"] = true;
+  currentProblem[step] = val;
+  currentProblem[step + "Done"] = true;
 
-  if (
-    currentProblem.emotionDone &&
-    currentProblem.situationDone &&
-    currentProblem.solutionDone
-  ) {
+  if (currentProblem.emotionDone && currentProblem.situationDone && currentProblem.solutionDone) {
     currentProblem.completed = true;
   }
 
   saveProblems();
   renderActiveStep();
+
+  const currentIndex = indexForStep(step);
+  const allowed = getAllowedIndex();
+  const nextIndex = Math.min(currentIndex + 1, allowed);
+  if (nextIndex !== currentIndex) {
+    goToSlide(nextIndex);
+  }
 }
 
 function handleNewProblem() {
   if (currentProblem && !currentProblem.completed) {
-    const ok = confirm(
-      "Das aktuelle Problem ist noch nicht abgeschlossen. Trotzdem neues Problem starten?"
-    );
+    const ok = confirm("Das aktuelle Problem ist noch nicht abgeschlossen. Trotzdem neues Problem starten?");
     if (!ok) return;
   }
   createNewProblem();
   activeStep = "emotion";
-  renderActiveStep();
+  goToSlide(0);
 }
 
-// Detail view
+newProblemBtn.addEventListener("click", handleNewProblem);
 
 function openDetailView(problem) {
   detailEmotion.textContent = problem.emotion;
@@ -297,7 +386,10 @@ function closeDetailView() {
   detailOverlay.classList.add("hidden");
 }
 
-// Theme switch
+detailClose.addEventListener("click", closeDetailView);
+detailOverlay.addEventListener("click", e => {
+  if (e.target === detailOverlay) closeDetailView();
+});
 
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-clear4-theme", theme);
@@ -307,40 +399,12 @@ function applyTheme(theme) {
   });
 }
 
-// ================= EVENT LISTENERS =================
-
-tabEmotion.addEventListener("click", () => {
-  activeStep = "emotion";
-  renderActiveStep();
-});
-
-tabSituation.addEventListener("click", () => {
-  activeStep = "situation";
-  renderActiveStep();
-});
-
-tabSolution.addEventListener("click", () => {
-  activeStep = "solution";
-  renderActiveStep();
-});
-
-confirmBtn.addEventListener("click", handleConfirm);
-newProblemBtn.addEventListener("click", handleNewProblem);
-
-detailClose.addEventListener("click", closeDetailView);
-detailOverlay.addEventListener("click", e => {
-  if (e.target === detailOverlay) closeDetailView();
-});
-
 themeChips.forEach(chip => {
-  chip.addEventListener("click", () => {
-    applyTheme(chip.dataset.theme);
-  });
+  chip.addEventListener("click", () => applyTheme(chip.dataset.theme));
 });
 
-// ================= INIT =================
-
-(function init() {
+// ---------- Init ----------
+function initApp() {
   const storedTheme = localStorage.getItem(STORAGE_KEY_THEME) || "JOY";
   applyTheme(storedTheme);
 
@@ -351,8 +415,8 @@ themeChips.forEach(chip => {
   }
 
   renderActiveStep();
+  goToSlide(indexForStep(activeStep));
 
-  // Service Worker Registrierung
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker
@@ -360,4 +424,7 @@ themeChips.forEach(chip => {
         .catch(err => console.error("SW registration failed", err));
     });
   }
-})();
+}
+
+// Start mit Passwort-Gate
+handlePasswordGate();
