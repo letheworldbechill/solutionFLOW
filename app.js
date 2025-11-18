@@ -2,7 +2,6 @@ const stepsOrder = ["emotion", "situation", "solution"];
 const STORAGE_KEY_PROBLEMS = "sf_problems_v1";
 const STORAGE_KEY_CURRENT = "sf_current_problem_id";
 const STORAGE_KEY_THEME = "sf_theme";
-const STORAGE_KEY_PASSWORD_HASH = "sf_pw_hash_v1";
 
 let problems = [];
 let currentProblem = null;
@@ -37,19 +36,6 @@ const detailClose = document.getElementById("detail-close");
 
 const themeChips = document.querySelectorAll(".chip");
 
-// Passwort DOM
-const pwScreen = document.getElementById("pw-screen");
-const pwTitle = document.getElementById("pw-title");
-const pwInput = document.getElementById("pw-input");
-const pwSubmit = document.getElementById("pw-submit");
-
-// Buttons für Bestätigen
-document.querySelectorAll("[data-step-confirm]").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const step = btn.getAttribute("data-step-confirm");
-    confirmStep(step);
-  });
-});
 
 
 // ---------- Storage ----------
@@ -383,4 +369,6 @@ function initApp() {
 }
 
 // Start mit Passwort-Gate
-handlePasswordGate();
+// Start direkt ohne Passwort
+initApp();
+
