@@ -5,8 +5,8 @@
   "theme_color": "#e47e34",
   "background_color": "#000000",
   "display": "standalone",
-  "start_url": "/solutionFLOW/index.html",
-  "scope": "/solutionFLOW/",
+  "start_url": "index.html",
+  "scope": "/root/main",
   "icons": [
     {
       "src": "icons/icon-192.png",
