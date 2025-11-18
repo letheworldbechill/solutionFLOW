@@ -1,0 +1,22 @@
+{
+  "name": "Solution FLOW",
+  "short_name": "FLOW",
+  "description": "Eine kleine App, um Emotionen, Situationen und Lösungen bewusst zu reflektieren.",
+  "theme_color": "#f5a55b",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/solutionFLOW/index.html",
+  "scope": "/solutionFLOW/",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
