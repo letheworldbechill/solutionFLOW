@@ -51,50 +51,6 @@ document.querySelectorAll("[data-step-confirm]").forEach(btn => {
   });
 });
 
-// ---------- Passwort-Hash (einfacher Schutz, kein Hardcore-Security) ----------
-async function sha256(str) {
-  const data = new TextEncoder().encode(str);
-  const hashBuf = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuf))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-async function handlePasswordGate() {
-  const storedHash = localStorage.getItem(STORAGE_KEY_PASSWORD_HASH);
-
-  pwScreen.style.display = "flex";
-  if (!storedHash) {
-    pwTitle.textContent = "Passwort festlegen";
-    pwSubmit.textContent = "Speichern & öffnen";
-  } else {
-    pwTitle.textContent = "Passwort eingeben";
-    pwSubmit.textContent = "Entsperren";
-  }
-
-  pwSubmit.addEventListener("click", async () => {
-    const pw = pwInput.value;
-    if (!pw) {
-      alert("Bitte ein Passwort eingeben.");
-      return;
-    }
-    const hash = await sha256(pw);
-
-    if (!storedHash) {
-      // Erstmaliges Setzen
-      localStorage.setItem(STORAGE_KEY_PASSWORD_HASH, hash);
-      pwScreen.style.display = "none";
-      initApp();
-    } else {
-      if (hash === storedHash) {
-        pwScreen.style.display = "none";
-        initApp();
-      } else {
-        alert("Falsches Passwort.");
-      }
-    }
-  });
-}
 
 // ---------- Storage ----------
 function loadProblems() {
