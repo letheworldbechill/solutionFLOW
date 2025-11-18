@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Solution Flow – Clear 4</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Swiper CSS (CDN) -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/swiper@9/swiper-bundle.min.css"
+  />
+
+  <style>
+    :root {
+      /* Clear 4 Grundfarben */
+      --c4-navy: #062b3a;
+      --c4-navy-soft: #0c394c;
+      --c4-bg-page: #f2f5f7;
+      --c4-card-bg: #ffffff;
+      --c4-border-soft: #d8e2ea;
+      --c4-text-main: #16222b;
+      --c4-text-muted: #6b7a88;
+      --c4-accent: #f59c3d; /* Bestätigen-Button */
+
+      /* Flow-Stufen – Startfarben (soft) */
+      --flow-emotion-soft: rgba(239, 68, 68, 0.12);  /* rot 25% */
+      --flow-emotion-neutral: #e5e7eb;               /* nachher grau */
+      --flow-situation-soft: rgba(245, 158, 11, 0.18); /* gelb 25%+ */
+      --flow-situation-neutral: #e5e7eb;
+      --flow-solution-soft: rgba(34, 197, 94, 0.24); /* grün 30% */
+      --flow-solution-solid: #22c55e;                /* final grün */
+
+      --radius-card: 24px;
+      --radius-inner: 18px;
+      --shadow-soft: 0 24px 60px rgba(15, 23, 42, 0.12);
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Inter",
+        "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-sans);
+      background: radial-gradient(circle at top, #ffffff, var(--c4-bg-page));
+      color: var(--c4-text-main);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px 12px;
+    }
+
+    .flow-shell {
+      width: 100%;
+      max-width: 960px;
+      background: linear-gradient(135deg, #ffffff, #f9fafb);
+      border-radius: 32px;
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      border: 1px solid rgba(15, 23, 42, 0.04);
+    }
+
+    /* Header */
+    .flow-header {
+      background: linear-gradient(135deg, var(--c4-navy), var(--c4-navy-soft));
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #ffffff;
+    }
+
+    .flow-title {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .flow-modes {
+      display: flex;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.35);
+      border-radius: 999px;
+      padding: 4px;
+    }
+
+    .flow-mode-chip {
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      opacity: 0.7;
+      cursor: default;
+      white-space: nowrap;
+    }
+
+    .flow-mode-chip.is-active {
+      background: #fed7aa;
+      color: #7c2d12;
+      border-color: rgba(248, 250, 252, 0.6);
+      opacity: 1;
+    }
+
+    /* Body */
+    .flow-body {
+      padding: 20px 24px 24px;
+    }
+
+    @media (min-width: 768px) {
+      .flow-body {
+        padding: 24px 32px 32px;
+      }
+    }
+
+    /* Swiper Container */
+    .swiper {
+      width: 100%;
+    }
+
+    .swiper-wrapper {
+      padding-bottom: 8px;
+    }
+
+    .swiper-slide {
+      display: flex;
+      align-items: stretch;
+    }
+
+    /* Card / Slide */
+    .flow-slide-card {
+      background: var(--c4-card-bg);
+      border-radius: var(--radius-card);
+      border: 1px solid var(--c4-border-soft);
+      padding: 20px 20px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+    }
+
+    @media (min-width: 768px) {
+      .flow-slide-card {
+        padding: 24px 28px 22px;
+      }
+    }
+
+    .flow-step-badge-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .flow-step-pill {
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      background: rgba(15, 23, 42, 0.02);
+      color: #4b5563;
+    }
+
+    .flow-step-label {
+      font-size: 12px;
+      color: var(--c4-text-muted);
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .flow-step-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .flow-step-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .flow-step-subtitle {
+      font-size: 13px;
+      color: var(--c4-text-muted);
+    }
+
+    .flow-step-surface {
+      border-radius: var(--radius-inner);
+      padding: 14px;
+      background: var(--flow-emotion-soft);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .flow-step-surface.is-emotion       { background: var(--flow-emotion-soft); }
+    .flow-step-surface.is-emotion-done  { background: var(--flow-emotion-neutral); }
+
+    .flow-step-surface.is-situation     { background: var(--flow-situation-soft); }
+    .flow-step-surface.is-situation-done{ background: var(--flow-situation-neutral); }
+
+    .flow-step-surface.is-solution      { background: var(--flow-solution-soft); }
+    .flow-step-surface.is-solution-done { background: var(--flow-solution-solid); }
+
+    .flow-textarea {
+      width: 100%;
+      min-height: 150px;
+      resize: vertical;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      padding: 10px 12px;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--c4-text-main);
+      outline: none;
+    }
+
+    .flow-textarea:focus {
+      border-color: var(--c4-accent);
+      box-shadow: 0 0 0 1px rgba(245, 156, 61, 0.35);
+    }
+
+    .flow-cta-row {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .flow-btn-primary {
+      border-radius: 999px;
+      border: none;
+      padding: 10px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #f97316, var(--c4-accent));
+      color: #fff7ed;
+      box-shadow: 0 16px 40px rgba(248, 153, 60, 0.35);
+      cursor: pointer;
+      transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+    }
+
+    .flow-btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 20px 50px rgba(248, 153, 60, 0.4);
+    }
+
+    .flow-btn-primary:active {
+      transform: translateY(1px);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.25);
+    }
+
+    /* Untere Step-Buttons (Emotions / Reale Situation / Ursache beheben) */
+
+    .flow-steps-nav {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .flow-steps-nav-btn {
+      flex: 1 1 140px;
+      max-width: 220px;
+      border-radius: 999px;
+      padding: 10px 16px;
+      border: 1px solid rgba(15, 23, 42, 0.18);
+      background: #f9fafb;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      color: #374151;
+      text-align: center;
+      transition: background 0.15s ease, color 0.15s ease, transform 0.08s ease;
+    }
+
+    .flow-steps-nav-btn.is-active {
+      background: #0f172a;
+      color: #f9fafb;
+      transform: translateY(-1px);
+    }
+
+    .flow-steps-nav-btn.is-emotion { border-color: rgba(248, 113, 113, 0.7); }
+    .flow-steps-nav-btn.is-situation { border-color: rgba(251, 191, 36, 0.7); }
+    .flow-steps-nav-btn.is-solution { border-color: rgba(74, 222, 128, 0.7); }
+
+    /* Swiper pagination / arrows optional – hier minimal */
+    .swiper-pagination-bullets {
+      bottom: 0;
+    }
+
+    .swiper-pagination-bullet {
+      background: rgba(15, 23, 42, 0.25);
+      opacity: 1;
+    }
+
+    .swiper-pagination-bullet-active {
+      background: var(--c4-accent);
+    }
+
+    /* Abschluss-Slide */
+
+    .summary-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    @media (min-width: 900px) {
+      .summary-layout {
+        flex-direction: row;
+        gap: 20px;
+      }
+    }
+
+    .summary-side {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .summary-chip {
+      border-radius: 16px;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.4;
+      border: 1px solid rgba(15, 23, 42, 0.16);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .summary-chip.is-emotion {
+      border-color: rgba(248, 113, 113, 0.7);
+      background: var(--flow-emotion-soft);
+    }
+
+    .summary-chip.is-situation {
+      border-color: rgba(251, 191, 36, 0.7);
+      background: var(--flow-situation-soft);
+    }
+
+    .summary-main {
+      flex: 2;
+      border-radius: 22px;
+      padding: 18px 18px 20px;
+      background: linear-gradient(135deg, #4ade80, #16a34a);
+      color: #ecfdf3;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 18px 50px rgba(22, 163, 74, 0.45);
+    }
+
+    .summary-main h3 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .summary-main p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .summary-main-content {
+      margin-top: 4px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.14);
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .flow-footer-note {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--c4-text-muted);
+      text-align: center;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="flow-shell">
+    <!-- Header -->
+    <header class="flow-header">
+      <div>
+        <div class="flow-title">SOLUTION FLOW</div>
+        <div style="font-size: 12px; opacity: 0.85;">
+          ruhig · strukturiert · ehrlich · professionell
+        </div>
+      </div>
+      <div class="flow-modes">
+        <div class="flow-mode-chip">JOY · leicht</div>
+        <div class="flow-mode-chip is-active">CLEAR · neutral</div>
+        <div class="flow-mode-chip">DEEP · fokussiert</div>
+      </div>
+    </header>
+
+    <main class="flow-body">
+      <!-- Swiper -->
+      <div class="swiper">
+        <div class="swiper-wrapper">
+
+          <!-- SLIDE 1 – Emotion -->
+          <div class="swiper-slide" data-step="emotion">
+            <section class="flow-slide-card">
+              <div class="flow-step-badge-row">
+                <div class="flow-step-pill">Schritt 1 · Emotion</div>
+                <div class="flow-step-label">Wahrnehmen & benennen</div>
+              </div>
+
+              <div class="flow-step-header">
+                <div class="flow-step-title">Auslöser der Emotion</div>
+                <div class="flow-step-subtitle">
+                  Unangenehme Welle ernst nehmen und benennen.
+                </div>
+              </div>
+
+              <div id="emotionSurface" class="flow-step-surface is-emotion">
+                <textarea
+                  id="emotionText"
+                  class="flow-textarea"
+                  placeholder="Ich fühlte mich &hellip;"
+                ></textarea>
+
+                <div class="flow-cta-row">
+                  <button class="flow-btn-primary" data-confirm="emotion">
+                    Bestätigen
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- SLIDE 2 – Reale Situation -->
+          <div class="swiper-slide" data-step="situation">
+            <section class="flow-slide-card">
+              <div class="flow-step-badge-row">
+                <div class="flow-step-pill">Schritt 2 · Reale Situation</div>
+                <div class="flow-step-label">Objektiv betrachten</div>
+              </div>
+
+              <div class="flow-step-header">
+                <div class="flow-step-title">Entstehungskontext des Auslösers</div>
+                <div class="flow-step-subtitle">
+                  Situation so objektiv wie möglich beschreiben.
+                </div>
+              </div>
+
+              <div id="situationSurface" class="flow-step-surface is-situation">
+                <textarea
+                  id="situationText"
+                  class="flow-textarea"
+                  placeholder="Die Situation war &hellip;"
+                ></textarea>
+
+                <div class="flow-cta-row">
+                  <button class="flow-btn-primary" data-confirm="situation">
+                    Bestätigen
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- SLIDE 3 – Ursache beheben -->
+          <div class="swiper-slide" data-step="solution">
+            <section class="flow-slide-card">
+              <div class="flow-step-badge-row">
+                <div class="flow-step-pill">Schritt 3 · Ursache beheben</div>
+                <div class="flow-step-label">Hindernisse & Wege</div>
+              </div>
+
+              <div class="flow-step-header">
+                <div class="flow-step-title">Hindernisse & mögliche Lösungen</div>
+                <div class="flow-step-subtitle">
+                  Konkrete Schritte, wie du die Ursache bearbeitest.
+                </div>
+              </div>
+
+              <div id="solutionSurface" class="flow-step-surface is-solution">
+                <textarea
+                  id="solutionText"
+                  class="flow-textarea"
+                  placeholder="Ich könnte &hellip;"
+                ></textarea>
+
+                <div class="flow-cta-row">
+                  <button class="flow-btn-primary" data-confirm="solution">
+                    Bestätigen
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- SLIDE 4 – Abschluss -->
+          <div class="swiper-slide" data-step="summary">
+            <section class="flow-slide-card">
+              <div class="flow-step-badge-row">
+                <div class="flow-step-pill">Abschluss · Überblick</div>
+                <div class="flow-step-label">Dein Lösungsbild</div>
+              </div>
+
+              <div class="summary-layout">
+                <div class="summary-side">
+                  <div class="summary-chip is-emotion">
+                    <strong>Emotion</strong><br />
+                    <span id="summaryEmotion">Noch nichts eingetragen.</span>
+                  </div>
+                  <div class="summary-chip is-situation">
+                    <strong>Reale Situation</strong><br />
+                    <span id="summarySituation">Noch nichts eingetragen.</span>
+                  </div>
+                </div>
+
+                <div class="summary-main">
+                  <h3>Ursache beheben</h3>
+                  <p>
+                    Deine möglichen Schritte, um die Situation aktiv zu verändern.
+                  </p>
+                  <div
+                    id="summarySolution"
+                    class="summary-main-content"
+                  >Noch keine Lösungen notiert.</div>
+                </div>
+              </div>
+
+              <div class="flow-footer-note">
+                Du kannst jederzeit zu den vorherigen Schritten zurückkehren und
+                Formulierungen anpassen.
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="swiper-pagination"></div>
+      </div>
+
+      <!-- Untere Step-Navigation -->
+      <div class="flow-steps-nav">
+        <button class="flow-steps-nav-btn is-emotion is-active" data-go="0">
+          Emotion
+        </button>
+        <button class="flow-steps-nav-btn is-situation" data-go="1">
+          Reale Situation
+        </button>
+        <button class="flow-steps-nav-btn is-solution" data-go="2">
+          Ursache beheben
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Swiper JS (CDN) -->
+  <script src="https://unpkg.com/swiper@9/swiper-bundle.min.js"></script>
+
+  <script>
+    // Swiper initialisieren
+    const swiper = new Swiper(".swiper", {
+      loop: false,
+      autoHeight: true,
+      pagination: {
+        el: ".swiper-pagination",
+        clickable: true
+      }
+    });
+
+    // Step-Navigation unten (Buttons)
+    const stepButtons = document.querySelectorAll(".flow-steps-nav-btn");
+    stepButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const goIndex = Number(btn.getAttribute("data-go"));
+        swiper.slideTo(goIndex);
+      });
+    });
+
+    function updateStepButtons(activeIndex) {
+      stepButtons.forEach((btn) => btn.classList.remove("is-active"));
+      const match = Array.from(stepButtons).find(
+        (btn) => Number(btn.getAttribute("data-go")) === activeIndex
+      );
+      if (match) match.classList.add("is-active");
+    }
+
+    swiper.on("slideChange", () => {
+      updateStepButtons(swiper.realIndex);
+    });
+
+    // Inhalte speichern & Flächen färben
+    const emotionSurface   = document.getElementById("emotionSurface");
+    const situationSurface = document.getElementById("situationSurface");
+    const solutionSurface  = document.getElementById("solutionSurface");
+
+    const emotionTextEl   = document.getElementById("emotionText");
+    const situationTextEl = document.getElementById("situationText");
+    const solutionTextEl  = document.getElementById("solutionText");
+
+    const summaryEmotionEl   = document.getElementById("summaryEmotion");
+    const summarySituationEl = document.getElementById("summarySituation");
+    const summarySolutionEl  = document.getElementById("summarySolution");
+
+    const state = {
+      emotion: "",
+      situation: "",
+      solution: ""
+    };
+
+    function handleConfirm(step) {
+      if (step === "emotion") {
+        state.emotion = emotionTextEl.value.trim();
+        if (state.emotion) {
+          emotionSurface.classList.remove("is-emotion");
+          emotionSurface.classList.add("is-emotion-done");
+        }
+        swiper.slideTo(1);
+      } else if (step === "situation") {
+        state.situation = situationTextEl.value.trim();
+        if (state.situation) {
+          situationSurface.classList.remove("is-situation");
+          situationSurface.classList.add("is-situation-done");
+        }
+        swiper.slideTo(2);
+      } else if (step === "solution") {
+        state.solution = solutionTextEl.value.trim();
+        if (state.solution) {
+          solutionSurface.classList.remove("is-solution");
+          solutionSurface.classList.add("is-solution-done");
+        }
+        // Summary befüllen
+        summaryEmotionEl.textContent =
+          state.emotion || "Noch nichts eingetragen.";
+        summarySituationEl.textContent =
+          state.situation || "Noch nichts eingetragen.";
+        summarySolutionEl.textContent =
+          state.solution || "Noch keine Lösungen notiert.";
+        swiper.slideTo(3);
+      }
+    }
+
+    document.querySelectorAll("[data-confirm]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const step = btn.getAttribute("data-confirm");
+        handleConfirm(step);
+      });
+    });
+  </script>
+</body>
+</html>
